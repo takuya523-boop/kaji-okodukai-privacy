@@ -221,6 +221,20 @@
   }
   details[open] summary { margin-bottom: 8px; }
 
+  .verdict-box {
+    background: #f0f6f3;
+    border: 1px solid #cfe0d8;
+    border-left: 4px solid var(--green);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.88em;
+    margin-bottom: 18px;
+  }
+  .verdict-box > strong:first-child { color: var(--green); display: block; margin-bottom: 2px; }
+  .verdict-box strong { color: var(--green); }
+  .card.wide { grid-column: 1 / -1; border-left-width: 6px; }
+  .card.wide .v { font-size: 1.6em; }
+
   .note {
     font-size: 0.82em;
     color: var(--muted);
@@ -260,6 +274,9 @@
   </button>
   <button class="tab" role="tab" id="tab-estate" aria-controls="panel-estate" aria-selected="false">
     不動産投資<span class="tab-sub">利回りと損益分岐は？</span>
+  </button>
+  <button class="tab" role="tab" id="tab-compare" aria-controls="panel-compare" aria-selected="false">
+    繰上返済 vs 投資<span class="tab-sub">どっちが資金効率いい？</span>
   </button>
 </div>
 
@@ -518,6 +535,111 @@
   </div>
 </section>
 
+<!-- ===================== 繰上返済 vs 投資 ===================== -->
+<section class="panel" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
+  <div class="verdict-box">
+    <strong>判断のしかた</strong>
+    繰上返済は「ローン金利と同じ利回りを、確実に、非課税で得られる運用」とまったく同じ効果です。
+    だから比べるべきは金額ではなく<strong>利回りだけ</strong>。
+    投資の期待利回りが下の「損益分岐利回り」を超えるなら投資、下回るなら繰上返済が有利になります。
+  </div>
+
+  <div class="inputs" id="compare-inputs">
+    <div class="field">
+      <label for="c-balance">ローン残高 <span class="unit">（万円）</span></label>
+      <input type="number" id="c-balance" value="14000" min="0" step="100">
+    </div>
+    <div class="field">
+      <label for="c-rate">ローン金利（年率） <span class="unit">（％）</span></label>
+      <input type="number" id="c-rate" value="1.0" min="0" step="0.05">
+    </div>
+    <div class="field">
+      <label for="c-years">残りの返済期間 <span class="unit">（年）</span></label>
+      <input type="number" id="c-years" value="40" min="1" max="50" step="1">
+    </div>
+    <div class="field">
+      <label for="c-lump">手元の余裕資金（一括） <span class="unit">（万円）</span></label>
+      <input type="number" id="c-lump" value="500" min="0" step="50">
+    </div>
+    <div class="field">
+      <label for="c-monthly">毎月の余裕資金 <span class="unit">（円）</span></label>
+      <input type="number" id="c-monthly" value="50000" min="0" step="5000">
+    </div>
+    <div class="field">
+      <label for="c-invrate">投資の期待利回り（年率） <span class="unit">（％）</span></label>
+      <input type="number" id="c-invrate" value="5" min="-20" step="0.1">
+    </div>
+    <div class="field">
+      <label for="c-account">運用する口座</label>
+      <select id="c-account">
+        <option value="nisa">NISA（運用益が非課税）</option>
+        <option value="taxable">課税口座（20.315％）</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="c-dedyears">住宅ローン控除の残り <span class="unit">（年）</span></label>
+      <input type="number" id="c-dedyears" value="13" min="0" max="15" step="1">
+    </div>
+    <div class="field">
+      <label for="c-dedcap">控除対象の借入上限 <span class="unit">（万円）</span></label>
+      <input type="number" id="c-dedcap" value="5000" min="0" step="500">
+      <span class="hint">残高がこの額を超える分は控除されません。</span>
+    </div>
+    <div class="field">
+      <label for="c-dedrate">控除率 <span class="unit">（％）</span></label>
+      <input type="number" id="c-dedrate" value="0.7" min="0" step="0.1">
+    </div>
+  </div>
+
+  <div class="cards" id="compare-cards"></div>
+
+  <h2>いくら差がつく？</h2>
+  <div class="table-wrap">
+    <table id="compare-scenario">
+      <thead>
+        <tr><th>投資の年利</th><th>繰上返済ルート</th><th>投資ルート</th><th>差額</th><th>有利なのは</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="hint" style="margin-top:4px;">いずれも「毎月の支出額はまったく同じ」にそろえた比較です。返済期間の終わりの時点で、どちらも借金はゼロになります。</p>
+
+  <h2>純資産（投資評価額 − ローン残高）の推移</h2>
+  <div class="chart-wrap">
+    <div id="compare-chart"></div>
+    <div class="legend" id="compare-legend"></div>
+  </div>
+
+  <details>
+    <summary>年ごとの純資産を見る</summary>
+    <div class="table-wrap">
+      <table id="compare-table">
+        <thead>
+          <tr><th>経過年</th><th>繰上返済ルート</th><th>投資ルート</th><th>差額</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+
+  <div class="note">
+    <strong>比較の前提</strong>
+    <ul>
+      <li><strong>どちらのルートも毎月の支出は同額</strong>です。繰上返済ルートは余裕資金をローンに、投資ルートは同じ額を投資に回し、ローン完済後は浮いた返済額をそのまま投資に回します。最後は両方とも借金ゼロになるので、残った純資産だけを比べています。</li>
+      <li>繰上返済は<strong>期間短縮型</strong>（毎月の返済額は変えずに完済を早める方式）で計算しています。返済額軽減型より有利になる方式です。</li>
+      <li>住宅ローン控除は「年末残高 × 控除率（借入上限まで）」で計算し、受け取った控除額は両ルートとも投資に回す前提です。<strong>残高が控除上限を大きく超えているうちは、繰上返済しても控除額は減りません</strong>。逆に残高が上限に近づくと、繰上返済が控除を削ってしまい不利になります。</li>
+      <li>課税口座を選んだ場合、運用益への課税は期間終了時に全額売却する前提で計算しています。</li>
+    </ul>
+    <strong style="display:block;margin-top:10px;">数字に出ない、でも大事なこと</strong>
+    <ul>
+      <li><strong>確実性がまったく違います。</strong>繰上返済の利回りは確定ですが、投資の期待利回りはあくまで平均の見込みです。40年の途中には評価額が半分になる時期もあり得ます。</li>
+      <li><strong>変動金利は上がると分岐点も上がります。</strong>金利が上がるほど繰上返済が有利に傾くので、金利の見直し時に判断し直してください。</li>
+      <li><strong>団体信用生命保険</strong>が付いている場合、返済中に万一のことがあればローンは消えます。繰上返済はこの保障を先に手放すことにもなります。</li>
+      <li><strong>手元資金の余裕（流動性）</strong>も価値です。繰上返済したお金は簡単には戻せません。生活防衛資金を残したうえで判断してください。</li>
+    </ul>
+  </div>
+</section>
+
 <footer>
   本シミュレーターはブラウザ内だけで計算しており、入力内容が外部に送信されることはありません。<br>
   結果は概算であり、将来の運用成果や返済額を保証するものではありません。実際のご契約・ご投資の判断は、金融機関や専門家にご相談ください。
@@ -565,6 +687,7 @@
   }
 
   function manSigned(n) {
+    if (Math.abs(n) < MAN / 2) return "±0万円"; // 万円未満の差は「差なし」として扱う
     return (n > 0 ? "＋" : "") + man(n);
   }
 
@@ -1121,12 +1244,168 @@
     document.querySelector("#estate-table tbody").innerHTML = trs;
   }
 
+  /* ============ 繰上返済 vs 投資 ============ */
+
+  /**
+   * 2つのルートを同じ支出額で比較する。
+   * prepay=true  : 余裕資金をローンへ（期間短縮型）。完済後は浮いた返済額を投資へ。
+   * prepay=false : 余裕資金を投資へ。ローンは予定どおり返済。
+   * どちらも毎月の支出は（毎月返済額＋余裕資金）で同額になる。
+   */
+  function route(o, prepay) {
+    var n = Math.round(o.years * 12);
+    var r = o.loanRate / 100 / 12;
+    var ri = o.invRate / 100 / 12;
+    var base = pmt(o.principal, r, n);
+    var bal = o.principal - (prepay ? o.lump : 0);
+    if (bal < 0) bal = 0;
+    var inv = prepay ? 0 : o.lump;
+    var cost = inv; // 投資元本（課税額の計算用）
+    var yearly = [], payoffMonth = null, interest = 0;
+
+    function afterTax(v, c) {
+      var g = v - c;
+      return o.taxable && g > 0 ? v - g * 0.20315 : v;
+    }
+
+    for (var m = 1; m <= n; m++) {
+      inv *= (1 + ri);
+      var toLoan = prepay ? base + o.monthly : base;
+      var spill = 0;
+      if (bal > 0.005) {
+        var int = bal * r;
+        interest += int;
+        var pp = toLoan - int;
+        if (pp > bal) { spill = pp - bal; pp = bal; } // 完済月の余りは投資へ
+        if (pp < 0) pp = 0;
+        bal -= pp;
+        if (bal <= 0.005 && payoffMonth === null) payoffMonth = m;
+      } else {
+        spill = toLoan; // 完済後は返済額まるごと投資へ
+      }
+      if (!prepay) spill += o.monthly;
+      inv += spill;
+      cost += spill;
+
+      if (m % 12 === 0) {
+        if (m / 12 <= o.dedYears) {
+          var d = Math.min(bal, o.dedCap) * o.dedRate / 100;
+          inv += d; cost += d;
+        }
+        yearly.push({ year: m / 12, net: afterTax(inv, cost) - bal });
+      }
+    }
+    if (payoffMonth === null) payoffMonth = n;
+    return {
+      yearly: yearly, finalNet: afterTax(inv, cost) - bal,
+      payoffMonth: payoffMonth, interest: interest, basePayment: base
+    };
+  }
+
+  // 2ルートが等しくなる投資利回り（二分探索）
+  function breakEvenRate(o) {
+    var f = function (x) {
+      var q = {}; for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) q[k] = o[k];
+      q.invRate = x;
+      return route(q, false).finalNet - route(q, true).finalNet;
+    };
+    if (o.lump <= 0 && o.monthly <= 0) return null;
+    var lo = -10, hi = 40;
+    if (f(lo) > 0 || f(hi) < 0) return null;
+    for (var i = 0; i < 80; i++) {
+      var mid = (lo + hi) / 2;
+      if (f(mid) < 0) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  function calcCompare() {
+    var o = {
+      principal: num("c-balance") * MAN,
+      loanRate: num("c-rate"),
+      years: num("c-years"),
+      lump: num("c-lump") * MAN,
+      monthly: num("c-monthly"),
+      invRate: num("c-invrate"),
+      taxable: val("c-account") === "taxable",
+      dedYears: num("c-dedyears"),
+      dedCap: num("c-dedcap") * MAN,
+      dedRate: num("c-dedrate")
+    };
+    if (o.lump > o.principal) o.lump = o.principal;
+
+    var A = route(o, true);   // 繰上返済ルート
+    var B = route(o, false);  // 投資ルート
+    var be = breakEvenRate(o);
+    var diff = B.finalNet - A.finalNet;
+    var win = diff >= 0;
+    var noExtra = route({
+      principal: o.principal, loanRate: o.loanRate, years: o.years, lump: 0, monthly: 0,
+      invRate: o.invRate, taxable: o.taxable, dedYears: o.dedYears, dedCap: o.dedCap, dedRate: o.dedRate
+    }, true);
+
+    var html = "";
+    html += card("損益分岐利回り",
+      be === null ? "—" : pct(be, 2),
+      be === null ? "余裕資金を入力してください"
+        : "期待利回りがこれを超えるなら投資が有利（ローン金利 " + pct(o.loanRate, 2) +
+          (o.taxable ? "・課税口座なので上乗せ" : "・NISAなので上乗せなし") + "）",
+      "wide" + (be !== null && o.invRate > be ? "" : " danger"));
+    html += card(win ? "投資したほうが有利" : "繰上返済のほうが有利",
+      man(Math.abs(diff)) + " お得",
+      o.years + "年後の純資産の差（期待利回り " + pct(o.invRate, 1) + " の場合）",
+      win ? "accent" : "danger");
+    html += card("繰上返済ルートの純資産", man(A.finalNet), o.years + "年後");
+    html += card("投資ルートの純資産", man(B.finalNet), o.years + "年後", "blue");
+    html += card("繰上返済なら完済が早まる",
+      Math.floor((Math.round(o.years * 12) - A.payoffMonth) / 12) + "年" +
+      ((Math.round(o.years * 12) - A.payoffMonth) % 12) + "ヶ月",
+      "利息を " + man(noExtra.interest - A.interest) + " 削減");
+    html += card("毎月の支出（両ルート共通）", yen(A.basePayment + o.monthly),
+      "返済 " + yen(A.basePayment) + " ＋ 余裕資金 " + yen(o.monthly));
+    document.getElementById("compare-cards").innerHTML = html;
+
+    // 利回り別の比較
+    var rates = [0, 1, 2, 3, 4, 5, 7];
+    if (rates.indexOf(o.invRate) < 0) { rates.push(o.invRate); rates.sort(function (a, b) { return a - b; }); }
+    var rows = "";
+    for (var i = 0; i < rates.length; i++) {
+      var q = {}; for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) q[k] = o[k];
+      q.invRate = rates[i];
+      var a = route(q, true).finalNet, b = route(q, false).finalNet;
+      var tie = Math.abs(b - a) < MAN / 2;
+      rows += '<tr' + (rates[i] === o.invRate ? ' class="highlight"' : "") + "><td>" + pct(rates[i], 1) +
+        "</td><td>" + man(a) + "</td><td>" + man(b) +
+        '</td><td class="' + (tie ? "" : b > a ? "pos" : "neg") + '">' + manSigned(b - a) + "</td><td>" +
+        (tie ? "ほぼ互角" : b > a ? "投資" : "繰上返済") + "</td></tr>";
+    }
+    document.querySelector("#compare-scenario tbody").innerHTML = rows;
+
+    // グラフ・年次表
+    var labels = ["0年"], sa = [-(o.principal - o.lump)], sb = [o.lump - o.principal];
+    var trs = "";
+    for (var j = 0; j < A.yearly.length; j++) {
+      labels.push(A.yearly[j].year + "年");
+      sa.push(A.yearly[j].net);
+      sb.push(B.yearly[j].net);
+      trs += "<tr><td>" + A.yearly[j].year + "年目</td><td>" + man(A.yearly[j].net) + "</td><td>" +
+        man(B.yearly[j].net) + '</td><td class="' + (B.yearly[j].net >= A.yearly[j].net ? "pos" : "neg") +
+        '">' + manSigned(B.yearly[j].net - A.yearly[j].net) + "</td></tr>";
+    }
+    drawChart("compare-chart", "compare-legend", [
+      { name: "繰上返済ルート", color: "#2E5E4E", values: sa, type: "line" },
+      { name: "投資ルート", color: "#c9743a", values: sb, type: "line", dashed: true }
+    ], labels);
+    document.querySelector("#compare-table tbody").innerHTML = trs;
+  }
+
   /* ============ 入力の保存・復元 ============ */
 
   var PANELS = [
     { tab: "tab-loan", panel: "panel-loan", inputs: "loan-inputs", calc: calcLoan, key: "sim.loan" },
     { tab: "tab-invest", panel: "panel-invest", inputs: "invest-inputs", calc: calcInvest, key: "sim.invest" },
-    { tab: "tab-estate", panel: "panel-estate", inputs: "estate-inputs", calc: calcEstate, key: "sim.estate" }
+    { tab: "tab-estate", panel: "panel-estate", inputs: "estate-inputs", calc: calcEstate, key: "sim.estate" },
+    { tab: "tab-compare", panel: "panel-compare", inputs: "compare-inputs", calc: calcCompare, key: "sim.compare" }
   ];
 
   function store(p) {
