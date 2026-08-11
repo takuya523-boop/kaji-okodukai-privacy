@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>複利・返済シミュレーター｜住宅ローン・積立投資・不動産投資</title>
+<meta name="description" content="住宅ローンの金利上昇による返済額の変化、NISAなどの積立投資の複利効果、不動産投資の利回りと損益分岐を、ブラウザだけで計算できるシミュレーターです。">
+<style>
+  :root {
+    --green: #2E5E4E;
+    --green-light: #4a8a72;
+    --bg: #fffdf8;
+    --card: #ffffff;
+    --line: #e5e0d5;
+    --text: #333;
+    --muted: #777;
+    --accent: #c9743a;
+    --danger: #b03a3a;
+    --blue: #3a6ea5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    line-height: 1.8;
+    color: var(--text);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 16px 80px;
+    background: var(--bg);
+  }
+  h1 {
+    color: var(--green);
+    font-size: 1.6em;
+    text-align: center;
+    margin-bottom: 0;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-top: 4px;
+    font-size: 0.92em;
+  }
+  h2 {
+    color: var(--green);
+    font-size: 1.2em;
+    border-bottom: 2px solid var(--green);
+    padding-bottom: 4px;
+    margin-top: 2em;
+  }
+  h3 {
+    color: #333;
+    font-size: 1.0em;
+    margin: 1.6em 0 0.4em;
+  }
+  a { color: var(--green); }
+
+  /* タブ */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin: 28px 0 20px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    flex: 1 1 auto;
+    min-width: 150px;
+    padding: 12px 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 10px;
+    font-size: 0.95em;
+    font-family: inherit;
+    color: var(--muted);
+    cursor: pointer;
+    line-height: 1.4;
+    text-align: center;
+  }
+  .tab .tab-sub {
+    display: block;
+    font-size: 0.75em;
+    color: #999;
+  }
+  .tab[aria-selected="true"] {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+    font-weight: bold;
+  }
+  .tab[aria-selected="true"] .tab-sub { color: #cfe3da; }
+  .panel[hidden] { display: none; }
+
+  /* 入力 */
+  .inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .field { display: flex; flex-direction: column; }
+  .field label {
+    font-size: 0.82em;
+    color: var(--muted);
+    margin-bottom: 2px;
+    line-height: 1.5;
+  }
+  .field .unit { color: #aaa; }
+  .field input, .field select {
+    font-family: inherit;
+    font-size: 1.05em;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    width: 100%;
+  }
+  .field input:focus, .field select:focus {
+    outline: 2px solid var(--green-light);
+    outline-offset: 1px;
+  }
+  .hint {
+    font-size: 0.78em;
+    color: #999;
+    margin-top: 2px;
+    line-height: 1.5;
+  }
+
+  /* 結果カード */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--green);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .card .k { font-size: 0.8em; color: var(--muted); line-height: 1.5; }
+  .card .v { font-size: 1.35em; font-weight: bold; color: var(--green); line-height: 1.4; }
+  .card .s { font-size: 0.78em; color: #999; line-height: 1.5; }
+  .card.accent { border-left-color: var(--accent); }
+  .card.accent .v { color: var(--accent); }
+  .card.danger { border-left-color: var(--danger); }
+  .card.danger .v { color: var(--danger); }
+  .card.blue { border-left-color: var(--blue); }
+  .card.blue .v { color: var(--blue); }
+
+  /* グラフ */
+  .chart-wrap {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 10px 8px;
+    margin: 16px 0;
+  }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 0.82em;
+    color: var(--muted);
+    padding: 6px 4px 2px;
+  }
+  .legend span::before {
+    content: "";
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: -1px;
+    background: var(--sw, #ccc);
+  }
+
+  /* 表 */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 8px 0 4px; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.86em;
+    background: var(--card);
+    min-width: 480px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 7px 10px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  th {
+    background: #f4f1e9;
+    color: var(--green);
+    font-weight: bold;
+    text-align: center;
+  }
+  td:first-child, th:first-child { text-align: center; }
+  tr.highlight td { background: #f0f6f3; font-weight: bold; }
+  td.neg { color: var(--danger); }
+  td.pos { color: var(--green); }
+
+  details {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 14px 0;
+  }
+  details summary {
+    cursor: pointer;
+    color: var(--green);
+    font-size: 0.92em;
+    font-weight: bold;
+  }
+  details[open] summary { margin-bottom: 8px; }
+
+  .note {
+    font-size: 0.82em;
+    color: var(--muted);
+    background: #f7f4ec;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-top: 16px;
+  }
+  .note ul { margin: 6px 0 0; padding-left: 1.3em; }
+  .note li { margin-bottom: 4px; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 0.8em;
+    color: #999;
+    text-align: center;
+  }
+  @media (max-width: 480px) {
+    body { padding: 24px 12px 60px; }
+    .card .v { font-size: 1.2em; }
+  }
+</style>
+</head>
+<body>
+
+<h1>複利シミュレーター</h1>
+<p class="subtitle">住宅ローン・積立投資・不動産投資の「増え方」と「損益分岐」を計算します</p>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" id="tab-loan" aria-controls="panel-loan" aria-selected="true">
+    住宅ローン<span class="tab-sub">金利が上がると月々いくら？</span>
+  </button>
+  <button class="tab" role="tab" id="tab-invest" aria-controls="panel-invest" aria-selected="false">
+    積立投資（NISA）<span class="tab-sub">毎月の積立が何倍になる？</span>
+  </button>
+  <button class="tab" role="tab" id="tab-estate" aria-controls="panel-estate" aria-selected="false">
+    不動産投資<span class="tab-sub">利回りと損益分岐は？</span>
+  </button>
+</div>
+
+<!-- ===================== 住宅ローン ===================== -->
+<section class="panel" id="panel-loan" role="tabpanel" aria-labelledby="tab-loan">
+  <div class="inputs" id="loan-inputs">
+    <div class="field">
+      <label for="l-amount">借入額 <span class="unit">（万円）</span></label>
+      <input type="number" id="l-amount" value="3500" min="0" step="50">
+    </div>
+    <div class="field">
+      <label for="l-rate">金利（年率） <span class="unit">（％）</span></label>
+      <input type="number" id="l-rate" value="1.0" min="0" step="0.05">
+    </div>
+    <div class="field">
+      <label for="l-years">返済期間 <span class="unit">（年）</span></label>
+      <input type="number" id="l-years" value="35" min="1" max="50" step="1">
+    </div>
+    <div class="field">
+      <label for="l-method">返済方式</label>
+      <select id="l-method">
+        <option value="equal">元利均等（毎月同額）</option>
+        <option value="principal">元金均等（初回が最大）</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="l-changeyear">金利が上がるタイミング <span class="unit">（年後）</span></label>
+      <input type="number" id="l-changeyear" value="0" min="0" max="50" step="1">
+      <span class="hint">0＝借入当初から。5＝5年後に上昇。</span>
+    </div>
+    <div class="field">
+      <label for="l-extra">毎月の繰上返済額 <span class="unit">（円）</span></label>
+      <input type="number" id="l-extra" value="0" min="0" step="5000">
+      <span class="hint">期間短縮型で計算します。</span>
+    </div>
+  </div>
+
+  <div class="cards" id="loan-cards"></div>
+
+  <h2>金利が上がったら、月々いくら増える？</h2>
+  <p class="subtitle" id="loan-scenario-caption" style="text-align:left;margin:0 0 8px;"></p>
+  <div class="table-wrap">
+    <table id="loan-scenario">
+      <thead>
+        <tr>
+          <th>金利</th>
+          <th>上昇後の毎月返済額</th>
+          <th>毎月の増加額</th>
+          <th>総返済額</th>
+          <th>総額の増加</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>残高の推移</h2>
+  <div class="chart-wrap">
+    <div id="loan-chart"></div>
+    <div class="legend" id="loan-legend"></div>
+  </div>
+
+  <details>
+    <summary>年ごとの返済内訳を見る</summary>
+    <div class="table-wrap">
+      <table id="loan-table">
+        <thead>
+          <tr><th>経過年</th><th>年間返済額</th><th>うち元金</th><th>うち利息</th><th>年末残高</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+
+  <div class="note">
+    <strong>前提と注意</strong>
+    <ul>
+      <li>ボーナス払いなし、毎月払いのみで計算しています。</li>
+      <li>変動金利の「5年ルール（5年間は返済額を据え置く）」「125％ルール（増額は前回の1.25倍まで）」は考慮せず、金利上昇時に残りの期間で再計算しています。実際の返済額の増え方は金融機関の商品性によって異なります。</li>
+      <li>保証料・団体信用生命保険料・事務手数料・固定資産税などは含みません。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== 積立投資 ===================== -->
+<section class="panel" id="panel-invest" role="tabpanel" aria-labelledby="tab-invest" hidden>
+  <div class="inputs" id="invest-inputs">
+    <div class="field">
+      <label for="i-monthly">毎月の積立額 <span class="unit">（円）</span></label>
+      <input type="number" id="i-monthly" value="10000" min="0" step="1000">
+    </div>
+    <div class="field">
+      <label for="i-initial">最初にまとめて入れる額 <span class="unit">（万円）</span></label>
+      <input type="number" id="i-initial" value="0" min="0" step="10">
+    </div>
+    <div class="field">
+      <label for="i-rate">期待利回り（年率） <span class="unit">（％）</span></label>
+      <input type="number" id="i-rate" value="5" min="-20" step="0.1">
+    </div>
+    <div class="field">
+      <label for="i-years">積立期間 <span class="unit">（年）</span></label>
+      <input type="number" id="i-years" value="30" min="1" max="60" step="1">
+    </div>
+    <div class="field">
+      <label for="i-cost">信託報酬など年間コスト <span class="unit">（％）</span></label>
+      <input type="number" id="i-cost" value="0.1" min="0" step="0.01">
+    </div>
+    <div class="field">
+      <label for="i-inflation">想定インフレ率 <span class="unit">（％）</span></label>
+      <input type="number" id="i-inflation" value="2" min="0" step="0.1">
+      <span class="hint">将来のお金を今の価値に換算します。</span>
+    </div>
+    <div class="field">
+      <label for="i-target">目標金額 <span class="unit">（万円）</span></label>
+      <input type="number" id="i-target" value="1000" min="0" step="100">
+      <span class="hint">到達時期を計算します。0で非表示。</span>
+    </div>
+  </div>
+
+  <div class="cards" id="invest-cards"></div>
+
+  <h2>元本と運用益の推移</h2>
+  <div class="chart-wrap">
+    <div id="invest-chart"></div>
+    <div class="legend" id="invest-legend"></div>
+  </div>
+
+  <h2>利回りが変わるとどうなる？</h2>
+  <div class="table-wrap">
+    <table id="invest-scenario">
+      <thead>
+        <tr><th>年利</th><th>最終評価額</th><th>運用益</th><th>元本の何倍</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <details>
+    <summary>年ごとの推移を見る</summary>
+    <div class="table-wrap">
+      <table id="invest-table">
+        <thead>
+          <tr><th>経過年</th><th>累計元本</th><th>評価額</th><th>運用益</th><th>今の価値に換算</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+
+  <div class="note">
+    <strong>前提と注意</strong>
+    <ul>
+      <li>月利＝（期待利回り − 年間コスト）÷ 12 とし、毎月末に積み立てて毎月複利で運用する前提です（金融庁「つみたてシミュレーター」と同じ計算方式で、結果も一致します）。</li>
+      <li>実際の運用は毎年同じ利回りにはなりません。相場が下落する年もあり、途中の評価額は上下します。あくまで平均的に推移した場合の目安です。</li>
+      <li>NISA口座は運用益が非課税です。課税口座との比較では、期間終了時に全額売却して利益に20.315％課税される前提で計算しています。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== 不動産投資 ===================== -->
+<section class="panel" id="panel-estate" role="tabpanel" aria-labelledby="tab-estate" hidden>
+  <div class="inputs" id="estate-inputs">
+    <div class="field">
+      <label for="e-price">物件価格 <span class="unit">（万円）</span></label>
+      <input type="number" id="e-price" value="3000" min="0" step="50">
+    </div>
+    <div class="field">
+      <label for="e-cost">購入諸費用 <span class="unit">（物件価格の％）</span></label>
+      <input type="number" id="e-cost" value="7" min="0" step="0.5">
+    </div>
+    <div class="field">
+      <label for="e-equity">自己資金 <span class="unit">（万円）</span></label>
+      <input type="number" id="e-equity" value="500" min="0" step="50">
+    </div>
+    <div class="field">
+      <label for="e-rate">借入金利（年率） <span class="unit">（％）</span></label>
+      <input type="number" id="e-rate" value="2.0" min="0" step="0.05">
+    </div>
+    <div class="field">
+      <label for="e-years">借入期間 <span class="unit">（年）</span></label>
+      <input type="number" id="e-years" value="30" min="1" max="50" step="1">
+    </div>
+    <div class="field">
+      <label for="e-rent">月額家賃（満室時） <span class="unit">（円）</span></label>
+      <input type="number" id="e-rent" value="175000" min="0" step="1000">
+    </div>
+    <div class="field">
+      <label for="e-vacancy">想定空室率 <span class="unit">（％）</span></label>
+      <input type="number" id="e-vacancy" value="5" min="0" max="100" step="1">
+    </div>
+    <div class="field">
+      <label for="e-opex">運営経費率 <span class="unit">（家賃収入の％）</span></label>
+      <input type="number" id="e-opex" value="20" min="0" max="100" step="1">
+      <span class="hint">管理委託費・修繕費・共用部費用など。</span>
+    </div>
+    <div class="field">
+      <label for="e-tax">固定資産税など <span class="unit">（年額・万円）</span></label>
+      <input type="number" id="e-tax" value="8" min="0" step="1">
+    </div>
+    <div class="field">
+      <label for="e-rentdown">家賃下落率 <span class="unit">（年％）</span></label>
+      <input type="number" id="e-rentdown" value="1" min="0" step="0.1">
+    </div>
+    <div class="field">
+      <label for="e-pricedown">物件価格の下落率 <span class="unit">（年％）</span></label>
+      <input type="number" id="e-pricedown" value="1.5" min="0" step="0.1">
+    </div>
+    <div class="field">
+      <label for="e-sellcost">売却時の諸費用 <span class="unit">（売却価格の％）</span></label>
+      <input type="number" id="e-sellcost" value="4" min="0" step="0.5">
+    </div>
+  </div>
+
+  <div class="cards" id="estate-cards"></div>
+
+  <h2>損益分岐のめやす</h2>
+  <div class="cards" id="estate-be"></div>
+
+  <h2>5年後・10年後のリターン</h2>
+  <div class="table-wrap">
+    <table id="estate-milestone">
+      <thead>
+        <tr><th>時点</th><th>累計キャッシュフロー</th><th>ローン残債</th><th>想定売却価格</th><th>売却した場合の通算損益</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="hint" style="margin-top:4px;">通算損益＝累計キャッシュフロー＋（売却価格−売却諸費用−残債）−自己資金。プラスなら、その時点で売却して投資全体が黒字ということです。</p>
+
+  <h2>キャッシュフローの推移</h2>
+  <div class="chart-wrap">
+    <div id="estate-chart"></div>
+    <div class="legend" id="estate-legend"></div>
+  </div>
+
+  <details>
+    <summary>年ごとの収支を見る</summary>
+    <div class="table-wrap">
+      <table id="estate-table">
+        <thead>
+          <tr><th>経過年</th><th>実効家賃収入</th><th>運営経費・税</th><th>ローン返済</th><th>年間CF</th><th>累計CF</th><th>残債</th><th>売却時通算損益</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+
+  <div class="note">
+    <strong>前提と注意</strong>
+    <ul>
+      <li>すべて税引前（所得税・住民税の計算前）のキャッシュフローです。減価償却による節税効果や、売却時の譲渡所得税は含みません。</li>
+      <li>大規模修繕費・原状回復費・入居者募集の広告費などの一時的な支出は、運営経費率にまとめて含める前提です。</li>
+      <li>実効家賃収入＝満室家賃 ×（1 − 空室率）で計算し、家賃は毎年一定率で下落する想定です。</li>
+      <li>ローンは元利均等返済、金利は期間中一定として計算しています。</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  本シミュレーターはブラウザ内だけで計算しており、入力内容が外部に送信されることはありません。<br>
+  結果は概算であり、将来の運用成果や返済額を保証するものではありません。実際のご契約・ご投資の判断は、金融機関や専門家にご相談ください。
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============ 共通ユーティリティ ============ */
+
+  var MAN = 10000;
+
+  function num(id) {
+    var el = document.getElementById(id);
+    var v = parseFloat(el.value);
+    if (!isFinite(v)) v = 0;
+    var min = el.getAttribute("min");
+    var max = el.getAttribute("max");
+    if (min !== null && v < parseFloat(min)) v = parseFloat(min);
+    if (max !== null && v > parseFloat(max)) v = parseFloat(max);
+    return v;
+  }
+
+  function val(id) {
+    return document.getElementById(id).value;
+  }
+
+  function yen(n) {
+    return Math.round(n).toLocaleString("ja-JP") + "円";
+  }
+
+  // 万円・億円で読みやすく表示
+  function man(n) {
+    var sign = n < 0 ? "−" : "";
+    var a = Math.abs(n);
+    var m = a / MAN;
+    if (m >= 10000) {
+      var oku = Math.floor(m / 10000);
+      var rest = Math.round(m % 10000);
+      if (rest >= 10000) { oku += 1; rest = 0; }
+      return sign + oku + "億" + (rest > 0 ? rest.toLocaleString("ja-JP") + "万" : "") + "円";
+    }
+    return sign + Math.round(m).toLocaleString("ja-JP") + "万円";
+  }
+
+  function manSigned(n) {
+    return (n > 0 ? "＋" : "") + man(n);
+  }
+
+  function pct(n, d) {
+    return n.toFixed(d === undefined ? 2 : d) + "％";
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  function card(k, v, s, cls) {
+    return '<div class="card' + (cls ? " " + cls : "") + '">' +
+      '<div class="k">' + esc(k) + "</div>" +
+      '<div class="v">' + esc(v) + "</div>" +
+      (s ? '<div class="s">' + esc(s) + "</div>" : "") +
+      "</div>";
+  }
+
+  /* ============ グラフ描画（SVG） ============ */
+
+  function niceStep(range) {
+    if (!(range > 0)) return 1;
+    var raw = range / 5;
+    var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var norm = raw / mag;
+    var step;
+    if (norm <= 1) step = 1;
+    else if (norm <= 2) step = 2;
+    else if (norm <= 2.5) step = 2.5;
+    else if (norm <= 5) step = 5;
+    else step = 10;
+    return step * mag;
+  }
+
+  function axisLabel(v) {
+    var m = v / MAN;
+    if (Math.abs(m) >= 10000) return (m / 10000).toFixed(1) + "億";
+    if (Math.abs(m) >= 1) return Math.round(m).toLocaleString("ja-JP") + "万";
+    if (v === 0) return "0";
+    return Math.round(v).toLocaleString("ja-JP");
+  }
+
+  /**
+   * series: [{name, color, values:[], type:'line'|'area'}]
+   * type 'area' のものは積み上げ、'line' は単独の折れ線。
+   * labels: x軸ラベル（values と同じ長さ）
+   */
+  function drawChart(mountId, legendId, series, labels) {
+    var W = 820, H = 300;
+    var padL = 62, padR = 14, padT = 14, padB = 32;
+    var n = labels.length;
+    var mount = document.getElementById(mountId);
+    if (n < 2) { mount.innerHTML = ""; return; }
+
+    // 積み上げ系列の累積を作る
+    var areas = [], lines = [];
+    var i, j;
+    for (i = 0; i < series.length; i++) {
+      (series[i].type === "area" ? areas : lines).push(series[i]);
+    }
+    var cum = [];
+    for (i = 0; i < areas.length; i++) {
+      var prev = i === 0 ? null : cum[i - 1];
+      var arr = [];
+      for (j = 0; j < n; j++) arr.push((prev ? prev[j] : 0) + (areas[i].values[j] || 0));
+      cum.push(arr);
+    }
+
+    var maxV = 0, minV = 0;
+    function track(v) { if (v > maxV) maxV = v; if (v < minV) minV = v; }
+    if (cum.length) for (j = 0; j < n; j++) track(cum[cum.length - 1][j]);
+    for (i = 0; i < lines.length; i++) for (j = 0; j < n; j++) track(lines[i].values[j] || 0);
+
+    var step = niceStep(maxV - minV);
+    var yMax = Math.ceil(maxV / step) * step;
+    var yMin = Math.floor(minV / step) * step;
+    if (yMax === yMin) yMax = yMin + step;
+
+    function x(k) { return padL + k * (W - padL - padR) / (n - 1); }
+    function y(v) { return padT + (yMax - v) * (H - padT - padB) / (yMax - yMin); }
+
+    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="推移グラフ">';
+
+    // Y軸グリッド
+    for (var t = yMin; t <= yMax + step / 2; t += step) {
+      var yy = y(t);
+      var isZero = Math.abs(t) < step / 1000;
+      svg += '<line x1="' + padL + '" y1="' + yy.toFixed(1) + '" x2="' + (W - padR) +
+        '" y2="' + yy.toFixed(1) + '" stroke="' + (isZero ? "#999" : "#e8e3d8") +
+        '" stroke-width="1"/>';
+      svg += '<text x="' + (padL - 8) + '" y="' + (yy + 4).toFixed(1) +
+        '" text-anchor="end" font-size="12" fill="#999">' + esc(axisLabel(t)) + "</text>";
+    }
+
+    // 積み上げエリア
+    for (i = areas.length - 1; i >= 0; i--) {
+      var top = cum[i];
+      var bottom = i === 0 ? null : cum[i - 1];
+      var d = "";
+      for (j = 0; j < n; j++) d += (j ? "L" : "M") + x(j).toFixed(1) + " " + y(top[j]).toFixed(1) + " ";
+      for (j = n - 1; j >= 0; j--) d += "L" + x(j).toFixed(1) + " " + y(bottom ? bottom[j] : 0).toFixed(1) + " ";
+      d += "Z";
+      svg += '<path d="' + d + '" fill="' + areas[i].color + '" fill-opacity="0.85"/>';
+    }
+
+    // 折れ線
+    for (i = 0; i < lines.length; i++) {
+      var pts = "";
+      for (j = 0; j < n; j++) pts += x(j).toFixed(1) + "," + y(lines[i].values[j] || 0).toFixed(1) + " ";
+      svg += '<polyline points="' + pts.trim() + '" fill="none" stroke="' + lines[i].color +
+        '" stroke-width="2.5" stroke-linejoin="round"' +
+        (lines[i].dashed ? ' stroke-dasharray="6 4"' : "") + "/>";
+    }
+
+    // X軸ラベル（最大8個程度）
+    var everyK = Math.max(1, Math.ceil((n - 1) / 8));
+    for (j = 0; j < n; j += everyK) {
+      svg += '<text x="' + x(j).toFixed(1) + '" y="' + (H - 10) +
+        '" text-anchor="middle" font-size="12" fill="#999">' + esc(labels[j]) + "</text>";
+    }
+    if ((n - 1) % everyK !== 0) {
+      svg += '<text x="' + x(n - 1).toFixed(1) + '" y="' + (H - 10) +
+        '" text-anchor="middle" font-size="12" fill="#999">' + esc(labels[n - 1]) + "</text>";
+    }
+
+    svg += "</svg>";
+    mount.innerHTML = svg;
+
+    var lg = "";
+    for (i = 0; i < series.length; i++) {
+      lg += '<span style="--sw:' + series[i].color + '">' + esc(series[i].name) + "</span>";
+    }
+    document.getElementById(legendId).innerHTML = lg;
+  }
+
+  /* ============ ローン計算 ============ */
+
+  // 元利均等の毎月返済額
+  function pmt(principal, monthlyRate, months) {
+    if (months <= 0) return 0;
+    if (monthlyRate === 0) return principal / months;
+    return principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
+  }
+
+  /**
+   * ローンを1ヶ月ずつシミュレーションする。
+   * opt: {principal, rate1, years, method, extra, changeYear, rate2}
+   * rate2 が指定されると changeYear 経過後に金利が変わる。
+   */
+  function simulateLoan(opt) {
+    var n = Math.round(opt.years * 12);
+    var method = opt.method || "equal";
+    var extra = opt.extra || 0;
+    var changeM = opt.rate2 == null ? -1 : Math.round((opt.changeYear || 0) * 12);
+
+    var bal = opt.principal;
+    var r = (changeM === 0 ? opt.rate2 : opt.rate1) / 100 / 12;
+    var pay = method === "equal" ? pmt(bal, r, n) : 0;
+    var fixedPrincipal = n > 0 ? opt.principal / n : 0;
+
+    var balances = [opt.principal];
+    var payments = [];
+    var interests = [];
+    var totalInterest = 0, totalPaid = 0;
+    var m;
+
+    for (m = 1; m <= n; m++) {
+      if (bal <= 0.005) break;
+      if (changeM > 0 && m === changeM + 1) {
+        r = opt.rate2 / 100 / 12;
+        if (method === "equal") pay = pmt(bal, r, n - m + 1);
+      }
+      var interest = bal * r;
+      var principalPart = (method === "equal" ? pay - interest : fixedPrincipal) + extra;
+      if (principalPart > bal) principalPart = bal;
+      if (principalPart < 0) principalPart = 0; // 金利が高すぎて元金が減らない場合の保護
+      var payment = principalPart + interest;
+      bal -= principalPart;
+      totalInterest += interest;
+      totalPaid += payment;
+      payments.push(payment);
+      interests.push(interest);
+      balances.push(bal);
+    }
+
+    return {
+      balances: balances,
+      payments: payments,
+      interests: interests,
+      totalInterest: totalInterest,
+      totalPaid: totalPaid,
+      months: payments.length,
+      termMonths: n,
+      // 指定月（0始まり）の返済額。返済が終わっていれば0。
+      paymentAt: function (idx) { return idx < payments.length ? payments[idx] : 0; }
+    };
+  }
+
+  function calcLoan() {
+    var principal = num("l-amount") * MAN;
+    var rate = num("l-rate");
+    var years = num("l-years");
+    var method = val("l-method");
+    var changeYear = Math.min(num("l-changeyear"), years);
+    var extra = num("l-extra");
+
+    var base = simulateLoan({ principal: principal, rate1: rate, years: years, method: method, extra: extra });
+    var noExtra = simulateLoan({ principal: principal, rate1: rate, years: years, method: method, extra: 0 });
+
+    // --- 主要指標カード ---
+    var html = "";
+    if (method === "equal") {
+      html += card("毎月の返済額", yen(base.paymentAt(0)), extra > 0 ? "（繰上返済 " + yen(extra) + " を含む）" : "");
+    } else {
+      html += card("毎月の返済額（初回）", yen(base.paymentAt(0)),
+        "最終回 " + yen(base.payments[base.months - 1] || 0));
+    }
+    html += card("総返済額", man(base.totalPaid), "元金 " + man(principal));
+    html += card("利息の総額", man(base.totalInterest),
+      "借入額の " + pct(principal > 0 ? base.totalInterest / principal * 100 : 0, 1), "accent");
+    html += card("年間の返済額", yen(base.payments.slice(0, 12).reduce(function (a, b) { return a + b; }, 0)),
+      "初年度の合計");
+
+    if (extra > 0) {
+      var saveMonths = noExtra.months - base.months;
+      html += card("繰上返済の効果", Math.floor(saveMonths / 12) + "年" + (saveMonths % 12) + "ヶ月短縮",
+        "利息を " + man(noExtra.totalInterest - base.totalInterest) + " 削減", "blue");
+    }
+    document.getElementById("loan-cards").innerHTML = html;
+
+    // --- 金利上昇シナリオ ---
+    var deltas = [0, 0.25, 0.5, 1.0, 1.5, 2.0];
+    var changeM = Math.round(changeYear * 12);
+    var basePayAtChange = base.paymentAt(changeM);
+    var rows = "";
+    for (var i = 0; i < deltas.length; i++) {
+      var d = deltas[i];
+      var s = d === 0 ? base : simulateLoan({
+        principal: principal, rate1: rate, years: years, method: method,
+        extra: extra, changeYear: changeYear, rate2: rate + d
+      });
+      var payAfter = s.paymentAt(changeM);
+      var diff = payAfter - basePayAtChange;
+      var totalDiff = s.totalPaid - base.totalPaid;
+      rows += '<tr' + (d === 1.0 ? ' class="highlight"' : "") + ">" +
+        "<td>" + pct(rate + d, 2) + (d === 0 ? "（現在）" : "（＋" + d + "）") + "</td>" +
+        "<td>" + yen(payAfter) + "</td>" +
+        '<td class="' + (diff > 0 ? "neg" : "") + '">' + (d === 0 ? "—" : "＋" + yen(diff)) + "</td>" +
+        "<td>" + man(s.totalPaid) + "</td>" +
+        '<td class="' + (totalDiff > 0 ? "neg" : "") + '">' + (d === 0 ? "—" : "＋" + man(totalDiff)) + "</td>" +
+        "</tr>";
+    }
+    document.querySelector("#loan-scenario tbody").innerHTML = rows;
+    document.getElementById("loan-scenario-caption").textContent =
+      changeYear > 0
+        ? "借入から" + changeYear + "年後に金利が上昇し、残り" + (years - changeYear) + "年で返済しきる場合の比較です。"
+        : "借入当初から金利が違っていた場合の比較です。";
+
+    // --- 残高推移グラフ（現在の金利 vs ＋1％） ---
+    var up1 = simulateLoan({
+      principal: principal, rate1: rate, years: years, method: method,
+      extra: extra, changeYear: changeYear, rate2: rate + 1.0
+    });
+    var labels = [], baseSeries = [], upSeries = [];
+    for (var yv = 0; yv <= years; yv++) {
+      var idx = Math.min(yv * 12, base.balances.length - 1);
+      var idx2 = Math.min(yv * 12, up1.balances.length - 1);
+      labels.push(yv + "年");
+      baseSeries.push(yv * 12 < base.balances.length ? base.balances[idx] : 0);
+      upSeries.push(yv * 12 < up1.balances.length ? up1.balances[idx2] : 0);
+    }
+    drawChart("loan-chart", "loan-legend", [
+      { name: "現在の金利 " + pct(rate, 2), color: "#2E5E4E", values: baseSeries, type: "line" },
+      { name: "＋1％のとき", color: "#c9743a", values: upSeries, type: "line", dashed: true }
+    ], labels);
+
+    // --- 年次テーブル ---
+    var trs = "";
+    for (var yy = 0; yy < years; yy++) {
+      var payY = 0, intY = 0, cnt = 0;
+      for (var m = yy * 12; m < (yy + 1) * 12 && m < base.months; m++) {
+        payY += base.payments[m];
+        intY += base.interests[m];
+        cnt++;
+      }
+      if (cnt === 0) break;
+      trs += "<tr><td>" + (yy + 1) + "年目</td><td>" + yen(payY) + "</td><td>" +
+        yen(payY - intY) + "</td><td>" + yen(intY) + "</td><td>" +
+        man(base.balances[Math.min((yy + 1) * 12, base.balances.length - 1)]) + "</td></tr>";
+    }
+    document.querySelector("#loan-table tbody").innerHTML = trs;
+  }
+
+  /* ============ 積立投資 ============ */
+
+  function simulateInvest(monthly, initial, annualPct, months) {
+    var r = annualPct / 100 / 12;
+    var bal = initial;
+    var balances = [initial];
+    var principals = [initial];
+    var p = initial;
+    for (var m = 1; m <= months; m++) {
+      bal = bal * (1 + r) + monthly;
+      p += monthly;
+      balances.push(bal);
+      principals.push(p);
+    }
+    return { balances: balances, principals: principals };
+  }
+
+  function calcInvest() {
+    var monthly = num("i-monthly");
+    var initial = num("i-initial") * MAN;
+    var grossRate = num("i-rate");
+    var cost = num("i-cost");
+    var netRate = grossRate - cost;
+    var years = num("i-years");
+    var inflation = num("i-inflation");
+    var target = num("i-target") * MAN;
+    var months = Math.round(years * 12);
+
+    var sim = simulateInvest(monthly, initial, netRate, months);
+    var finalValue = sim.balances[months];
+    var totalPrincipal = sim.principals[months];
+    var gain = finalValue - totalPrincipal;
+    var taxed = gain > 0 ? finalValue - gain * 0.20315 : finalValue;
+    var real = finalValue / Math.pow(1 + inflation / 100, years);
+
+    var html = "";
+    html += card("最終評価額（" + years + "年後）", man(finalValue), "実質年利 " + pct(netRate, 2) + " で運用した場合");
+    html += card("うち自分で出したお金", man(totalPrincipal), "毎月 " + yen(monthly) + " × " + months + "ヶ月");
+    html += card("うち運用で増えた分", man(gain),
+      totalPrincipal > 0 ? "元本の " + (finalValue / totalPrincipal).toFixed(2) + " 倍に" : "", "accent");
+    html += card("今のお金の価値に直すと", man(real), "インフレ率 " + pct(inflation, 1) + " で割り戻し", "blue");
+    html += card("NISAの節税メリット", man(gain > 0 ? gain * 0.20315 : 0),
+      "課税口座なら手取り " + man(taxed), "blue");
+    html += card("毎月4％ずつ取り崩すと", yen(finalValue * 0.04 / 12),
+      "資産を減らしにくい目安（4％ルール）");
+
+    // 目標金額の到達時期
+    if (target > 0) {
+      var reachedAt = -1;
+      for (var m = 0; m <= months; m++) {
+        if (sim.balances[m] >= target) { reachedAt = m; break; }
+      }
+      if (reachedAt >= 0) {
+        html += card("目標 " + man(target) + " に到達",
+          Math.floor(reachedAt / 12) + "年" + (reachedAt % 12) + "ヶ月後", "積立期間内に達成できます");
+      } else {
+        // 最長60年まで延長して探す
+        var ext = simulateInvest(monthly, initial, netRate, 60 * 12);
+        var extAt = -1;
+        for (var k = 0; k <= 60 * 12; k++) {
+          if (ext.balances[k] >= target) { extAt = k; break; }
+        }
+        html += card("目標 " + man(target) + " に到達",
+          extAt >= 0 ? Math.floor(extAt / 12) + "年" + (extAt % 12) + "ヶ月後" : "到達しません",
+          extAt >= 0 ? "この積立額だと期間が足りません" : "積立額か利回りの見直しが必要です", "danger");
+      }
+    }
+    document.getElementById("invest-cards").innerHTML = html;
+
+    // グラフ（元本 + 運用益の積み上げ）
+    var labels = [], pr = [], gn = [];
+    for (var yv = 0; yv <= years; yv++) {
+      var idx = yv * 12;
+      labels.push(yv + "年");
+      pr.push(sim.principals[idx]);
+      gn.push(Math.max(0, sim.balances[idx] - sim.principals[idx]));
+    }
+    drawChart("invest-chart", "invest-legend", [
+      { name: "積み立てた元本", color: "#7fa99b", values: pr, type: "area" },
+      { name: "運用で増えた分", color: "#c9743a", values: gn, type: "area" }
+    ], labels);
+
+    // 利回り別シナリオ
+    var rates = [0, 1, 3, 5, 7, 10];
+    if (rates.indexOf(grossRate) < 0) { rates.push(grossRate); rates.sort(function (a, b) { return a - b; }); }
+    var rows = "";
+    for (var i = 0; i < rates.length; i++) {
+      var s = simulateInvest(monthly, initial, rates[i] - cost, months);
+      var f = s.balances[months];
+      var g = f - totalPrincipal;
+      rows += '<tr' + (rates[i] === grossRate ? ' class="highlight"' : "") + "><td>" + pct(rates[i], 1) + "</td><td>" +
+        man(f) + '</td><td class="' + (g < 0 ? "neg" : "pos") + '">' + manSigned(g) + "</td><td>" +
+        (totalPrincipal > 0 ? (f / totalPrincipal).toFixed(2) + " 倍" : "—") + "</td></tr>";
+    }
+    document.querySelector("#invest-scenario tbody").innerHTML = rows;
+
+    // 年次テーブル
+    var trs = "";
+    for (var yy = 1; yy <= years; yy++) {
+      var b = sim.balances[yy * 12], p = sim.principals[yy * 12];
+      trs += "<tr><td>" + yy + "年目</td><td>" + man(p) + "</td><td>" + man(b) + '</td><td class="' +
+        (b - p < 0 ? "neg" : "pos") + '">' + manSigned(b - p) + "</td><td>" +
+        man(b / Math.pow(1 + inflation / 100, yy)) + "</td></tr>";
+    }
+    document.querySelector("#invest-table tbody").innerHTML = trs;
+  }
+
+  /* ============ 不動産投資 ============ */
+
+  function calcEstate() {
+    var price = num("e-price") * MAN;
+    var buyCostRate = num("e-cost") / 100;
+    var equity = num("e-equity") * MAN;
+    var rate = num("e-rate");
+    var years = num("e-years");
+    var rent = num("e-rent");
+    var vacancy = num("e-vacancy") / 100;
+    var opexRate = num("e-opex") / 100;
+    var propTax = num("e-tax") * MAN;
+    var rentDown = num("e-rentdown") / 100;
+    var priceDown = num("e-pricedown") / 100;
+    var sellCostRate = num("e-sellcost") / 100;
+
+    var buyCost = price * buyCostRate;
+    var totalInvest = price + buyCost;
+    var loan = Math.max(0, totalInvest - equity);
+    var loanSim = simulateLoan({ principal: loan, rate1: rate, years: years, method: "equal" });
+    var monthlyPay = loanSim.paymentAt(0);
+    var annualPay = monthlyPay * 12;
+
+    // 初年度の数値
+    var grossRentY1 = rent * 12;
+    var effRentY1 = grossRentY1 * (1 - vacancy);
+    var opexY1 = effRentY1 * opexRate;
+    var noiY1 = effRentY1 - opexY1 - propTax;
+    var cfY1 = noiY1 - annualPay;
+
+    var grossYield = price > 0 ? grossRentY1 / price * 100 : 0;
+    var netYield = totalInvest > 0 ? noiY1 / totalInvest * 100 : 0;
+    var ccr = equity > 0 ? cfY1 / equity * 100 : 0;
+
+    // 損益分岐入居率： 満室家賃×occ×(1−経費率) − 税 − 返済 = 0
+    var beOcc = (grossRentY1 * (1 - opexRate)) > 0
+      ? (propTax + annualPay) / (grossRentY1 * (1 - opexRate)) * 100
+      : Infinity;
+    // 損益分岐金利：CFがゼロになる金利（二分探索）
+    var beRate = null;
+    if (loan > 0) {
+      var lo = 0, hi = 30;
+      var cfAt = function (rr) {
+        var s = simulateLoan({ principal: loan, rate1: rr, years: years, method: "equal" });
+        return noiY1 - s.paymentAt(0) * 12;
+      };
+      if (cfAt(0) > 0 && cfAt(30) < 0) {
+        for (var it = 0; it < 60; it++) {
+          var mid = (lo + hi) / 2;
+          if (cfAt(mid) > 0) lo = mid; else hi = mid;
+        }
+        beRate = (lo + hi) / 2;
+      }
+    }
+
+    // 年次シミュレーション（借入期間か35年の長い方まで）
+    var horizon = Math.max(years, 35);
+    var rows = [];
+    var cumCF = 0;
+    for (var y = 1; y <= horizon; y++) {
+      var grossRent = rent * 12 * Math.pow(1 - rentDown, y - 1);
+      var effRent = grossRent * (1 - vacancy);
+      var opex = effRent * opexRate + propTax;
+      var payY = 0;
+      for (var m = (y - 1) * 12; m < y * 12; m++) payY += loanSim.paymentAt(m);
+      var cf = effRent - opex - payY;
+      cumCF += cf;
+      var balance = loanSim.balances[Math.min(y * 12, loanSim.balances.length - 1)];
+      if (y * 12 >= loanSim.balances.length) balance = 0;
+      var propValue = price * Math.pow(1 - priceDown, y);
+      var netSale = propValue * (1 - sellCostRate) - balance;
+      rows.push({
+        year: y, effRent: effRent, opex: opex, pay: payY, cf: cf,
+        cumCF: cumCF, balance: balance, value: propValue,
+        total: cumCF + netSale - equity
+      });
+    }
+
+    // 主要指標
+    var html = "";
+    html += card("表面利回り", pct(grossYield, 2), "年間家賃 " + man(grossRentY1) + " ÷ 物件価格");
+    html += card("実質利回り（NOI）", pct(netYield, 2), "諸費用込みの投資額に対して", "blue");
+    html += card("毎月のキャッシュフロー", yen(cfY1 / 12),
+      cfY1 >= 0 ? "手元に残る金額（初年度）" : "毎月の持ち出し（初年度）", cfY1 >= 0 ? "" : "danger");
+    html += card("年間キャッシュフロー", man(cfY1), "税引前", cfY1 >= 0 ? "" : "danger");
+    html += card("自己資金利回り（CCR）", equity > 0 ? pct(ccr, 2) : "—", "年間CF ÷ 自己資金 " + man(equity), "accent");
+    html += card("借入額 / 毎月返済", man(loan), "毎月 " + yen(monthlyPay) + "（" + pct(rate, 2) + "・" + years + "年）");
+    document.getElementById("estate-cards").innerHTML = html;
+
+    // 損益分岐
+    var be = "";
+    be += card("損益分岐入居率", isFinite(beOcc) ? pct(Math.max(0, beOcc), 1) : "—",
+      beOcc <= 100 ? "この入居率を下回ると赤字（現在の想定 " + pct((1 - vacancy) * 100, 1) + "）" : "満室でも赤字です",
+      beOcc <= 100 ? "" : "danger");
+    be += card("損益分岐金利", beRate !== null ? pct(beRate, 2) : "—",
+      beRate !== null ? "この金利を超えるとCFが赤字に（現在 " + pct(rate, 2) + "）" : "借入なし、または算出範囲外",
+      beRate !== null && beRate - rate < 1 ? "danger" : "");
+
+    // 自己資金の回収年（CFのみ）
+    var payback = null;
+    for (var i = 0; i < rows.length; i++) { if (rows[i].cumCF >= equity) { payback = rows[i].year; break; } }
+    be += card("自己資金の回収年数", payback ? payback + "年目" : "回収できません",
+      payback ? "家賃収入の累計だけで自己資金 " + man(equity) + " を回収" : "累計CFが自己資金に届きません",
+      payback ? "" : "danger");
+
+    // 売却込みで黒字になる年
+    var breakEvenSale = null;
+    for (var j = 0; j < rows.length; j++) { if (rows[j].total >= 0) { breakEvenSale = rows[j].year; break; } }
+    be += card("売却込みで黒字になる時期", breakEvenSale ? breakEvenSale + "年目以降" : "期間内に黒字化せず",
+      breakEvenSale ? "この年以降に売却すれば投資全体がプラス" : "想定条件では通算プラスになりません",
+      breakEvenSale ? "" : "danger");
+    document.getElementById("estate-be").innerHTML = be;
+
+    // 5年後・10年後・借入完済時
+    var milestones = [1, 5, 10, 20, Math.min(years, horizon), horizon];
+    var seen = {}, msRows = "";
+    milestones.sort(function (a, b) { return a - b; });
+    for (var k = 0; k < milestones.length; k++) {
+      var yy = milestones[k];
+      if (yy < 1 || yy > rows.length || seen[yy]) continue;
+      seen[yy] = true;
+      var r = rows[yy - 1];
+      msRows += '<tr' + (yy === 5 || yy === 10 ? ' class="highlight"' : "") + "><td>" + yy + "年後" +
+        (yy === years ? "（完済）" : "") + '</td><td class="' + (r.cumCF < 0 ? "neg" : "pos") + '">' +
+        manSigned(r.cumCF) + "</td><td>" + man(r.balance) + "</td><td>" + man(r.value) +
+        '</td><td class="' + (r.total < 0 ? "neg" : "pos") + '">' + manSigned(r.total) + "</td></tr>";
+    }
+    document.querySelector("#estate-milestone tbody").innerHTML = msRows;
+
+    // グラフ
+    var labels = ["0年"], cumSeries = [0], totalSeries = [-equity];
+    for (var q = 0; q < rows.length; q++) {
+      labels.push(rows[q].year + "年");
+      cumSeries.push(rows[q].cumCF);
+      totalSeries.push(rows[q].total);
+    }
+    drawChart("estate-chart", "estate-legend", [
+      { name: "累計キャッシュフロー", color: "#2E5E4E", values: cumSeries, type: "line" },
+      { name: "売却した場合の通算損益", color: "#c9743a", values: totalSeries, type: "line", dashed: true }
+    ], labels);
+
+    // 年次テーブル
+    var trs = "";
+    for (var p2 = 0; p2 < rows.length; p2++) {
+      var rw = rows[p2];
+      trs += "<tr><td>" + rw.year + "年目</td><td>" + man(rw.effRent) + "</td><td>" + man(rw.opex) +
+        "</td><td>" + man(rw.pay) + '</td><td class="' + (rw.cf < 0 ? "neg" : "pos") + '">' + manSigned(rw.cf) +
+        '</td><td class="' + (rw.cumCF < 0 ? "neg" : "pos") + '">' + manSigned(rw.cumCF) + "</td><td>" +
+        man(rw.balance) + '</td><td class="' + (rw.total < 0 ? "neg" : "pos") + '">' + manSigned(rw.total) + "</td></tr>";
+    }
+    document.querySelector("#estate-table tbody").innerHTML = trs;
+  }
+
+  /* ============ 入力の保存・復元 ============ */
+
+  var PANELS = [
+    { tab: "tab-loan", panel: "panel-loan", inputs: "loan-inputs", calc: calcLoan, key: "sim.loan" },
+    { tab: "tab-invest", panel: "panel-invest", inputs: "invest-inputs", calc: calcInvest, key: "sim.invest" },
+    { tab: "tab-estate", panel: "panel-estate", inputs: "estate-inputs", calc: calcEstate, key: "sim.estate" }
+  ];
+
+  function store(p) {
+    try {
+      var data = {};
+      var els = document.getElementById(p.inputs).querySelectorAll("input,select");
+      for (var i = 0; i < els.length; i++) data[els[i].id] = els[i].value;
+      localStorage.setItem(p.key, JSON.stringify(data));
+    } catch (e) { /* プライベートモード等では保存しない */ }
+  }
+
+  function restore(p) {
+    try {
+      var raw = localStorage.getItem(p.key);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      for (var id in data) {
+        if (!Object.prototype.hasOwnProperty.call(data, id)) continue;
+        var el = document.getElementById(id);
+        if (el) el.value = data[id];
+      }
+    } catch (e) { /* 壊れたデータは無視 */ }
+  }
+
+  /* ============ 初期化 ============ */
+
+  PANELS.forEach(function (p) {
+    restore(p);
+    document.getElementById(p.inputs).addEventListener("input", function () {
+      p.calc();
+      store(p);
+    });
+    document.getElementById(p.tab).addEventListener("click", function () {
+      PANELS.forEach(function (q) {
+        var active = q === p;
+        document.getElementById(q.tab).setAttribute("aria-selected", active ? "true" : "false");
+        document.getElementById(q.panel).hidden = !active;
+      });
+      p.calc();
+      if (location.hash !== "#" + p.panel) history.replaceState(null, "", "#" + p.panel);
+    });
+    p.calc();
+  });
+
+  // URLのハッシュで初期タブを選択（例: simulator.html#panel-estate）
+  var hash = location.hash.replace("#", "");
+  for (var i = 0; i < PANELS.length; i++) {
+    if (PANELS[i].panel === hash) { document.getElementById(PANELS[i].tab).click(); break; }
+  }
+})();
+</script>
+
+</body>
+</html>
